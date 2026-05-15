@@ -1,0 +1,584 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Calendar</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #fafaf9;
+    --surface: #ffffff;
+    --text: #1a1a1a;
+    --muted: #9a9a9a;
+    --border: #ececec;
+    --accent: #e8dcc4;
+    --accent-strong: #d4b896;
+    --hover: #f5f5f4;
+    --today: #1a1a1a;
+    --danger: #c44;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #1a1a1a;
+      --surface: #222221;
+      --text: #f0f0ef;
+      --muted: #6b6b6a;
+      --border: #2e2e2d;
+      --accent: #4a3f2a;
+      --accent-strong: #7a6544;
+      --hover: #2a2a29;
+      --today: #f0f0ef;
+    }
+  }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px 16px;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .app { width: 100%; max-width: 460px; }
+
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 28px;
+  }
+
+  .month-label {
+    font-size: 18px;
+    font-weight: 500;
+    letter-spacing: -0.01em;
+  }
+
+  .nav { display: flex; gap: 4px; }
+
+  .nav button {
+    width: 32px; height: 32px;
+    border: none; background: transparent;
+    color: var(--text); border-radius: 8px;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: background 0.15s ease;
+    font-size: 16px;
+  }
+  .nav button:hover { background: var(--hover); }
+
+  .weekdays {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    margin-bottom: 8px;
+  }
+  .weekdays span {
+    text-align: center;
+    font-size: 11px;
+    color: var(--muted);
+    font-weight: 500;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    padding: 4px 0;
+  }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 2px;
+  }
+
+  .day {
+    aspect-ratio: 1;
+    display: flex; align-items: center; justify-content: center;
+    border-radius: 10px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: all 0.15s ease;
+    position: relative;
+    user-select: none;
+  }
+  .day:hover { background: var(--hover); }
+  .day.empty, .day.muted { color: var(--muted); }
+  .day.today { font-weight: 600; color: var(--today); }
+  .day.today::after {
+    content: '';
+    position: absolute;
+    bottom: 6px;
+    width: 3px; height: 3px;
+    border-radius: 50%;
+    background: var(--today);
+  }
+  .day.has-note { background: var(--accent); color: var(--text); }
+  .day.has-note:hover { background: var(--accent-strong); }
+  .day.selected {
+    outline: 1.5px solid var(--text);
+    outline-offset: -1.5px;
+  }
+
+  .editor {
+    margin-top: 24px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    opacity: 0;
+    max-height: 0;
+    overflow: hidden;
+    transition: opacity 0.2s ease, max-height 0.2s ease, padding 0.2s ease;
+    padding: 0 16px;
+  }
+  .editor.active {
+    opacity: 1;
+    max-height: 300px;
+    padding: 16px;
+  }
+  .editor-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+  }
+  .editor-date { font-size: 13px; color: var(--muted); font-weight: 500; }
+  .editor-close {
+    border: none; background: transparent;
+    color: var(--muted); cursor: pointer;
+    font-size: 18px; line-height: 1;
+    padding: 2px 6px; border-radius: 4px;
+  }
+  .editor-close:hover { background: var(--hover); color: var(--text); }
+
+  textarea {
+    width: 100%;
+    border: none; background: transparent;
+    color: var(--text);
+    font-family: inherit; font-size: 14px;
+    resize: none; outline: none;
+    min-height: 60px; line-height: 1.5;
+  }
+  textarea::placeholder { color: var(--muted); }
+
+  .editor-actions {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-top: 8px; gap: 8px;
+  }
+  .status { font-size: 11px; color: var(--muted); transition: opacity 0.3s ease; }
+  .delete-btn {
+    border: none; background: transparent;
+    color: var(--muted); cursor: pointer;
+    font-size: 12px; padding: 4px 8px; border-radius: 6px;
+  }
+  .delete-btn:hover { color: var(--danger); background: var(--hover); }
+
+  .footer {
+    margin-top: 20px;
+    text-align: center;
+    font-size: 11px;
+    color: var(--muted);
+  }
+
+  /* Setup screen */
+  .setup {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 16px;
+  }
+  .setup h2 { font-size: 15px; margin-bottom: 12px; font-weight: 500; }
+  .setup p { font-size: 12px; color: var(--muted); margin-bottom: 10px; line-height: 1.5; }
+  .setup textarea {
+    width: 100%;
+    min-height: 140px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px;
+    font-family: ui-monospace, "SF Mono", Monaco, monospace;
+    font-size: 11px;
+    background: var(--bg);
+    margin-bottom: 10px;
+  }
+  .setup button {
+    background: var(--text);
+    color: var(--bg);
+    border: none;
+    padding: 8px 16px;
+    border-radius: 8px;
+    font-size: 13px;
+    cursor: pointer;
+    font-weight: 500;
+  }
+  .setup button:hover { opacity: 0.85; }
+  .setup .error { color: var(--danger); font-size: 12px; margin-top: 8px; }
+
+  .reset-link {
+    color: var(--muted);
+    font-size: 11px;
+    cursor: pointer;
+    text-decoration: underline;
+    text-decoration-color: transparent;
+    transition: text-decoration-color 0.15s ease;
+  }
+  .reset-link:hover { text-decoration-color: var(--muted); }
+
+  .loading-pulse {
+    display: inline-block;
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--muted);
+    animation: pulse 1.4s ease-in-out infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 0.3; }
+    50% { opacity: 1; }
+  }
+</style>
+</head>
+<body>
+  <div class="app">
+    <!-- Setup screen (shown when no Firebase config) -->
+    <div id="setupScreen" style="display: none;">
+      <div class="setup">
+        <h2>Connect your Firebase</h2>
+        <p>Paste the <code>firebaseConfig</code> object from your Firebase console (Project Settings → Your apps → Web app). It looks like:</p>
+        <p style="font-family: ui-monospace, monospace; font-size: 11px; background: var(--bg); padding: 8px; border-radius: 6px;">
+          { apiKey: "...", authDomain: "...", projectId: "...", ... }
+        </p>
+        <textarea id="configInput" placeholder='Paste your firebaseConfig object or just the JSON inside the braces'></textarea>
+        <button id="saveConfig">Connect</button>
+        <div class="error" id="configError"></div>
+      </div>
+    </div>
+
+    <!-- Calendar screen -->
+    <div id="calendarScreen" style="display: none;">
+      <header>
+        <div class="month-label" id="monthLabel">—</div>
+        <div class="nav">
+          <button id="prevBtn" aria-label="Previous">‹</button>
+          <button id="todayBtn" title="Today">·</button>
+          <button id="nextBtn" aria-label="Next">›</button>
+        </div>
+      </header>
+
+      <div class="weekdays">
+        <span>Sun</span><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span>
+      </div>
+
+      <div class="grid" id="grid"></div>
+
+      <div class="editor" id="editor">
+        <div class="editor-header">
+          <div class="editor-date" id="editorDate"></div>
+          <button class="editor-close" id="closeBtn">×</button>
+        </div>
+        <textarea id="noteInput" placeholder="Add a note…" rows="3"></textarea>
+        <div class="editor-actions">
+          <span class="status" id="status"></span>
+          <button class="delete-btn" id="deleteBtn">Delete</button>
+        </div>
+      </div>
+
+      <div class="footer">
+        <span id="syncStatus"><span class="loading-pulse"></span> Connecting…</span>
+        &nbsp;·&nbsp;
+        <span class="reset-link" id="resetLink">Reset connection</span>
+      </div>
+    </div>
+  </div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
+import {
+  getFirestore, collection, doc, setDoc, deleteDoc, onSnapshot
+} from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
+import {
+  getAuth, signInAnonymously, onAuthStateChanged
+} from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
+
+const $ = (id) => document.getElementById(id);
+const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+
+const state = {
+  viewDate: new Date(),
+  selectedKey: null,
+  notes: {},
+  saveTimer: null,
+  db: null,
+  uid: null,
+  unsubscribe: null,
+};
+
+/* ---------------- Setup / config persistence ----------------
+   Firebase config is stored in localStorage on each device. Falls back
+   to window.storage if available (Claude artifact host). */
+const CONFIG_KEY = 'firebase_config_v1';
+async function loadConfig() {
+  try {
+    if (typeof window.storage !== 'undefined' && window.storage?.get) {
+      const r = await window.storage.get(CONFIG_KEY, false);
+      if (r) return JSON.parse(r.value);
+    }
+  } catch {}
+  try {
+    const raw = localStorage.getItem(CONFIG_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch { return null; }
+}
+async function saveConfig(cfg) {
+  const json = JSON.stringify(cfg);
+  try {
+    if (typeof window.storage !== 'undefined' && window.storage?.set) {
+      await window.storage.set(CONFIG_KEY, json, false);
+      return;
+    }
+  } catch {}
+  localStorage.setItem(CONFIG_KEY, json);
+}
+async function clearConfig() {
+  try {
+    if (typeof window.storage !== 'undefined' && window.storage?.delete) {
+      await window.storage.delete(CONFIG_KEY, false);
+    }
+  } catch {}
+  try { localStorage.removeItem(CONFIG_KEY); } catch {}
+}
+
+function parseConfigInput(text) {
+  text = text.trim();
+  // Strip "const firebaseConfig =" or similar prefixes
+  text = text.replace(/^(const|let|var)\s+\w+\s*=\s*/, '').replace(/;$/, '');
+  // Try JSON first
+  try { return JSON.parse(text); } catch {}
+  // Convert JS object literal to JSON-ish: quote keys
+  try {
+    const quoted = text
+      .replace(/([{,]\s*)([A-Za-z_$][\w$]*)\s*:/g, '$1"$2":')
+      .replace(/'/g, '"');
+    return JSON.parse(quoted);
+  } catch (e) {
+    throw new Error('Could not parse config. Make sure you pasted the firebaseConfig object.');
+  }
+}
+
+/* ---------------- Calendar rendering ---------------- */
+function dateKey(y, m, d) {
+  return `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+}
+function parseKey(key) {
+  const [y, m, d] = key.split('-').map(Number);
+  return { y, m: m-1, d };
+}
+function formatDate(y, m, d) {
+  return new Date(y, m, d).toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' });
+}
+
+function render() {
+  const y = state.viewDate.getFullYear();
+  const m = state.viewDate.getMonth();
+  $('monthLabel').textContent = `${MONTHS[m]} ${y}`;
+
+  const firstDay = new Date(y, m, 1).getDay();
+  const daysInMonth = new Date(y, m+1, 0).getDate();
+  const daysInPrev = new Date(y, m, 0).getDate();
+
+  const today = new Date();
+  const todayStr = `${today.getFullYear()}-${today.getMonth()}-${today.getDate()}`;
+
+  let html = '';
+
+  for (let i = firstDay - 1; i >= 0; i--) {
+    const d = daysInPrev - i;
+    const pm = m === 0 ? 11 : m - 1;
+    const py = m === 0 ? y - 1 : y;
+    const key = dateKey(py, pm, d);
+    html += `<div class="day muted ${state.notes[key] ? 'has-note' : ''}" data-key="${key}">${d}</div>`;
+  }
+
+  for (let d = 1; d <= daysInMonth; d++) {
+    const key = dateKey(y, m, d);
+    const isToday = todayStr === `${y}-${m}-${d}`;
+    const classes = ['day'];
+    if (isToday) classes.push('today');
+    if (state.notes[key]) classes.push('has-note');
+    if (state.selectedKey === key) classes.push('selected');
+    html += `<div class="${classes.join(' ')}" data-key="${key}">${d}</div>`;
+  }
+
+  const totalCells = firstDay + daysInMonth;
+  const trailing = (7 - (totalCells % 7)) % 7;
+  for (let d = 1; d <= trailing; d++) {
+    const nm = m === 11 ? 0 : m + 1;
+    const ny = m === 11 ? y + 1 : y;
+    const key = dateKey(ny, nm, d);
+    html += `<div class="day muted ${state.notes[key] ? 'has-note' : ''}" data-key="${key}">${d}</div>`;
+  }
+
+  $('grid').innerHTML = html;
+  $('grid').querySelectorAll('.day').forEach(el => {
+    el.addEventListener('click', () => selectDay(el.dataset.key));
+  });
+}
+
+function selectDay(key) {
+  state.selectedKey = key;
+  const { y, m, d } = parseKey(key);
+  $('editorDate').textContent = formatDate(y, m, d);
+  $('noteInput').value = state.notes[key] || '';
+  $('editor').classList.add('active');
+  $('status').textContent = '';
+  if (y !== state.viewDate.getFullYear() || m !== state.viewDate.getMonth()) {
+    state.viewDate = new Date(y, m, 1);
+  }
+  render();
+  setTimeout(() => $('noteInput').focus(), 100);
+}
+
+function closeEditor() {
+  $('editor').classList.remove('active');
+  state.selectedKey = null;
+  render();
+}
+
+/* ---------------- Firestore ops ---------------- */
+async function saveNote() {
+  if (!state.selectedKey || !state.db || !state.uid) return;
+  const key = state.selectedKey;
+  const value = $('noteInput').value.trim();
+
+  try {
+    const ref = doc(state.db, `users/${state.uid}/notes`, key);
+    if (value) {
+      await setDoc(ref, { text: value, updatedAt: Date.now() });
+    } else {
+      await deleteDoc(ref);
+    }
+    $('status').textContent = 'Saved';
+    $('status').style.opacity = '1';
+    setTimeout(() => { $('status').style.opacity = '0'; }, 1500);
+  } catch (e) {
+    console.error(e);
+    $('status').textContent = 'Error: ' + e.code;
+  }
+}
+
+function debouncedSave() {
+  if (state.saveTimer) clearTimeout(state.saveTimer);
+  $('status').textContent = 'Saving…';
+  $('status').style.opacity = '1';
+  state.saveTimer = setTimeout(saveNote, 600);
+}
+
+async function deleteNote() {
+  if (!state.selectedKey) return;
+  $('noteInput').value = '';
+  await saveNote();
+  closeEditor();
+}
+
+/* ---------------- Init Firebase ---------------- */
+async function initFirebase(cfg) {
+  try {
+    const app = initializeApp(cfg);
+    const db = getFirestore(app);
+    const auth = getAuth(app);
+
+    state.db = db;
+
+    $('syncStatus').innerHTML = '<span class="loading-pulse"></span> Signing in…';
+
+    await signInAnonymously(auth);
+
+    onAuthStateChanged(auth, (user) => {
+      if (!user) return;
+      state.uid = user.uid;
+      $('syncStatus').textContent = '● Synced';
+
+      // Subscribe to notes in real time
+      if (state.unsubscribe) state.unsubscribe();
+      const notesRef = collection(db, `users/${user.uid}/notes`);
+      state.unsubscribe = onSnapshot(notesRef, (snap) => {
+        const next = {};
+        snap.forEach(d => { next[d.id] = d.data().text; });
+        state.notes = next;
+        // Refresh editor text if the open note changed remotely
+        if (state.selectedKey) {
+          const newText = state.notes[state.selectedKey] || '';
+          if ($('noteInput').value !== newText && document.activeElement !== $('noteInput')) {
+            $('noteInput').value = newText;
+          }
+        }
+        render();
+      }, (err) => {
+        console.error(err);
+        $('syncStatus').textContent = '⚠ ' + err.code;
+      });
+    });
+  } catch (e) {
+    console.error(e);
+    $('syncStatus').textContent = '⚠ ' + (e.code || e.message);
+  }
+}
+
+/* ---------------- Event wiring ---------------- */
+$('prevBtn').addEventListener('click', () => {
+  state.viewDate = new Date(state.viewDate.getFullYear(), state.viewDate.getMonth() - 1, 1);
+  render();
+});
+$('nextBtn').addEventListener('click', () => {
+  state.viewDate = new Date(state.viewDate.getFullYear(), state.viewDate.getMonth() + 1, 1);
+  render();
+});
+$('todayBtn').addEventListener('click', () => {
+  state.viewDate = new Date();
+  render();
+});
+$('closeBtn').addEventListener('click', closeEditor);
+$('deleteBtn').addEventListener('click', deleteNote);
+$('noteInput').addEventListener('input', debouncedSave);
+
+$('saveConfig').addEventListener('click', async () => {
+  const text = $('configInput').value;
+  $('configError').textContent = '';
+  try {
+    const cfg = parseConfigInput(text);
+    if (!cfg.apiKey || !cfg.projectId) {
+      throw new Error('Config is missing apiKey or projectId.');
+    }
+    await saveConfig(cfg);
+    $('setupScreen').style.display = 'none';
+    $('calendarScreen').style.display = 'block';
+    render();
+    initFirebase(cfg);
+  } catch (e) {
+    $('configError').textContent = e.message;
+  }
+});
+
+$('resetLink').addEventListener('click', async () => {
+  if (!confirm('Disconnect Firebase? Your notes stay in Firestore — this only clears the config from this artifact.')) return;
+  if (state.unsubscribe) state.unsubscribe();
+  await clearConfig();
+  location.reload();
+});
+
+/* ---------------- Boot ---------------- */
+(async () => {
+  const cfg = await loadConfig();
+  if (cfg) {
+    $('calendarScreen').style.display = 'block';
+    render();
+    initFirebase(cfg);
+  } else {
+    $('setupScreen').style.display = 'block';
+  }
+})();
+</script>
+</body>
+</html>
