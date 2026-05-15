@@ -61,6 +61,7 @@
     letter-spacing: -0.01em;
   }
 
+  .header-right { display: flex; align-items: center; gap: 10px; }
   .nav { display: flex; gap: 4px; }
 
   .nav button {
@@ -73,6 +74,16 @@
     font-size: 16px;
   }
   .nav button:hover { background: var(--hover); }
+
+  .avatar {
+    width: 26px; height: 26px;
+    border-radius: 50%;
+    background-size: cover;
+    background-position: center;
+    background-color: var(--hover);
+    cursor: pointer;
+    border: 1px solid var(--border);
+  }
 
   .weekdays {
     display: grid;
@@ -106,7 +117,7 @@
     user-select: none;
   }
   .day:hover { background: var(--hover); }
-  .day.empty, .day.muted { color: var(--muted); }
+  .day.muted { color: var(--muted); }
   .day.today { font-weight: 600; color: var(--today); }
   .day.today::after {
     content: '';
@@ -183,49 +194,83 @@
     color: var(--muted);
   }
 
-  /* Setup screen */
-  .setup {
+  /* Sign-in screen */
+  .signin {
+    text-align: center;
+    padding: 60px 20px;
+  }
+  .signin h1 {
+    font-size: 22px;
+    font-weight: 500;
+    margin-bottom: 8px;
+    letter-spacing: -0.02em;
+  }
+  .signin p {
+    font-size: 13px;
+    color: var(--muted);
+    margin-bottom: 28px;
+  }
+  .google-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 18px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--text);
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.15s ease;
+    font-family: inherit;
+  }
+  .google-btn:hover { background: var(--hover); }
+  .google-btn svg { width: 18px; height: 18px; }
+
+  .signin-error {
+    color: var(--danger);
+    font-size: 12px;
+    margin-top: 14px;
+    min-height: 16px;
+  }
+
+  /* Menu */
+  .menu {
+    position: absolute;
+    top: 56px;
+    right: 16px;
     background: var(--surface);
     border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 20px;
-    margin-bottom: 16px;
+    border-radius: 10px;
+    padding: 6px;
+    min-width: 180px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.08);
+    display: none;
+    z-index: 10;
   }
-  .setup h2 { font-size: 15px; margin-bottom: 12px; font-weight: 500; }
-  .setup p { font-size: 12px; color: var(--muted); margin-bottom: 10px; line-height: 1.5; }
-  .setup textarea {
-    width: 100%;
-    min-height: 140px;
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 10px;
-    font-family: ui-monospace, "SF Mono", Monaco, monospace;
-    font-size: 11px;
-    background: var(--bg);
-    margin-bottom: 10px;
-  }
-  .setup button {
-    background: var(--text);
-    color: var(--bg);
-    border: none;
-    padding: 8px 16px;
-    border-radius: 8px;
-    font-size: 13px;
-    cursor: pointer;
-    font-weight: 500;
-  }
-  .setup button:hover { opacity: 0.85; }
-  .setup .error { color: var(--danger); font-size: 12px; margin-top: 8px; }
-
-  .reset-link {
+  .menu.open { display: block; }
+  .menu-info {
+    padding: 8px 10px;
+    font-size: 12px;
     color: var(--muted);
-    font-size: 11px;
-    cursor: pointer;
-    text-decoration: underline;
-    text-decoration-color: transparent;
-    transition: text-decoration-color 0.15s ease;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 4px;
+    word-break: break-all;
   }
-  .reset-link:hover { text-decoration-color: var(--muted); }
+  .menu button {
+    width: 100%;
+    text-align: left;
+    background: transparent;
+    border: none;
+    color: var(--text);
+    padding: 8px 10px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 13px;
+    font-family: inherit;
+  }
+  .menu button:hover { background: var(--hover); }
 
   .loading-pulse {
     display: inline-block;
@@ -242,17 +287,21 @@
 </head>
 <body>
   <div class="app">
-    <!-- Setup screen (shown when no Firebase config) -->
-    <div id="setupScreen" style="display: none;">
-      <div class="setup">
-        <h2>Connect your Firebase</h2>
-        <p>Paste the <code>firebaseConfig</code> object from your Firebase console (Project Settings → Your apps → Web app). It looks like:</p>
-        <p style="font-family: ui-monospace, monospace; font-size: 11px; background: var(--bg); padding: 8px; border-radius: 6px;">
-          { apiKey: "...", authDomain: "...", projectId: "...", ... }
-        </p>
-        <textarea id="configInput" placeholder='Paste your firebaseConfig object or just the JSON inside the braces'></textarea>
-        <button id="saveConfig">Connect</button>
-        <div class="error" id="configError"></div>
+    <!-- Sign-in screen -->
+    <div id="signinScreen" style="display: none;">
+      <div class="signin">
+        <h1>Calendar</h1>
+        <p>Sign in to sync your notes across devices.</p>
+        <button class="google-btn" id="googleSignIn">
+          <svg viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
+            <path fill="#4285F4" d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844a4.14 4.14 0 0 1-1.796 2.716v2.258h2.908c1.702-1.567 2.684-3.874 2.684-6.615z"/>
+            <path fill="#34A853" d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z"/>
+            <path fill="#FBBC05" d="M3.964 10.71A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.042l3.007-2.332z"/>
+            <path fill="#EA4335" d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.958L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58z"/>
+          </svg>
+          Sign in with Google
+        </button>
+        <div class="signin-error" id="signinError"></div>
       </div>
     </div>
 
@@ -260,12 +309,20 @@
     <div id="calendarScreen" style="display: none;">
       <header>
         <div class="month-label" id="monthLabel">—</div>
-        <div class="nav">
-          <button id="prevBtn" aria-label="Previous">‹</button>
-          <button id="todayBtn" title="Today">·</button>
-          <button id="nextBtn" aria-label="Next">›</button>
+        <div class="header-right">
+          <div class="nav">
+            <button id="prevBtn" aria-label="Previous">‹</button>
+            <button id="todayBtn" title="Today">·</button>
+            <button id="nextBtn" aria-label="Next">›</button>
+          </div>
+          <div class="avatar" id="avatar" title="Account"></div>
         </div>
       </header>
+
+      <div class="menu" id="menu">
+        <div class="menu-info" id="menuInfo"></div>
+        <button id="signOutBtn">Sign out</button>
+      </div>
 
       <div class="weekdays">
         <span>Sun</span><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span>
@@ -287,8 +344,6 @@
 
       <div class="footer">
         <span id="syncStatus"><span class="loading-pulse"></span> Connecting…</span>
-        &nbsp;·&nbsp;
-        <span class="reset-link" id="resetLink">Reset connection</span>
       </div>
     </div>
   </div>
@@ -299,8 +354,25 @@ import {
   getFirestore, collection, doc, setDoc, deleteDoc, onSnapshot
 } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
 import {
-  getAuth, signInAnonymously, onAuthStateChanged
+  getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged
 } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
+
+// ===================== CONFIG =====================
+const firebaseConfig = {
+  apiKey: "AIzaSyAO53MPBFTTg9AiDAaVir4FMGivLUScPC8",
+  authDomain: "calendar-b320c.firebaseapp.com",
+  projectId: "calendar-b320c",
+  storageBucket: "calendar-b320c.firebasestorage.app",
+  messagingSenderId: "391157443239",
+  appId: "1:391157443239:web:a9a30b103392d128d70982",
+  measurementId: "G-037RPHZ9T5"
+};
+// ===================================================
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+const auth = getAuth(app);
+const provider = new GoogleAuthProvider();
 
 const $ = (id) => document.getElementById(id);
 const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
@@ -310,64 +382,10 @@ const state = {
   selectedKey: null,
   notes: {},
   saveTimer: null,
-  db: null,
   uid: null,
   unsubscribe: null,
 };
 
-/* ---------------- Setup / config persistence ----------------
-   Firebase config is stored in localStorage on each device. Falls back
-   to window.storage if available (Claude artifact host). */
-const CONFIG_KEY = 'firebase_config_v1';
-async function loadConfig() {
-  try {
-    if (typeof window.storage !== 'undefined' && window.storage?.get) {
-      const r = await window.storage.get(CONFIG_KEY, false);
-      if (r) return JSON.parse(r.value);
-    }
-  } catch {}
-  try {
-    const raw = localStorage.getItem(CONFIG_KEY);
-    return raw ? JSON.parse(raw) : null;
-  } catch { return null; }
-}
-async function saveConfig(cfg) {
-  const json = JSON.stringify(cfg);
-  try {
-    if (typeof window.storage !== 'undefined' && window.storage?.set) {
-      await window.storage.set(CONFIG_KEY, json, false);
-      return;
-    }
-  } catch {}
-  localStorage.setItem(CONFIG_KEY, json);
-}
-async function clearConfig() {
-  try {
-    if (typeof window.storage !== 'undefined' && window.storage?.delete) {
-      await window.storage.delete(CONFIG_KEY, false);
-    }
-  } catch {}
-  try { localStorage.removeItem(CONFIG_KEY); } catch {}
-}
-
-function parseConfigInput(text) {
-  text = text.trim();
-  // Strip "const firebaseConfig =" or similar prefixes
-  text = text.replace(/^(const|let|var)\s+\w+\s*=\s*/, '').replace(/;$/, '');
-  // Try JSON first
-  try { return JSON.parse(text); } catch {}
-  // Convert JS object literal to JSON-ish: quote keys
-  try {
-    const quoted = text
-      .replace(/([{,]\s*)([A-Za-z_$][\w$]*)\s*:/g, '$1"$2":')
-      .replace(/'/g, '"');
-    return JSON.parse(quoted);
-  } catch (e) {
-    throw new Error('Could not parse config. Make sure you pasted the firebaseConfig object.');
-  }
-}
-
-/* ---------------- Calendar rendering ---------------- */
 function dateKey(y, m, d) {
   return `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
 }
@@ -446,14 +464,13 @@ function closeEditor() {
   render();
 }
 
-/* ---------------- Firestore ops ---------------- */
 async function saveNote() {
-  if (!state.selectedKey || !state.db || !state.uid) return;
+  if (!state.selectedKey || !state.uid) return;
   const key = state.selectedKey;
   const value = $('noteInput').value.trim();
 
   try {
-    const ref = doc(state.db, `users/${state.uid}/notes`, key);
+    const ref = doc(db, `users/${state.uid}/notes`, key);
     if (value) {
       await setDoc(ref, { text: value, updatedAt: Date.now() });
     } else {
@@ -464,7 +481,7 @@ async function saveNote() {
     setTimeout(() => { $('status').style.opacity = '0'; }, 1500);
   } catch (e) {
     console.error(e);
-    $('status').textContent = 'Error: ' + e.code;
+    $('status').textContent = 'Error: ' + (e.code || e.message);
   }
 }
 
@@ -482,48 +499,24 @@ async function deleteNote() {
   closeEditor();
 }
 
-/* ---------------- Init Firebase ---------------- */
-async function initFirebase(cfg) {
-  try {
-    const app = initializeApp(cfg);
-    const db = getFirestore(app);
-    const auth = getAuth(app);
-
-    state.db = db;
-
-    $('syncStatus').innerHTML = '<span class="loading-pulse"></span> Signing in…';
-
-    await signInAnonymously(auth);
-
-    onAuthStateChanged(auth, (user) => {
-      if (!user) return;
-      state.uid = user.uid;
-      $('syncStatus').textContent = '● Synced';
-
-      // Subscribe to notes in real time
-      if (state.unsubscribe) state.unsubscribe();
-      const notesRef = collection(db, `users/${user.uid}/notes`);
-      state.unsubscribe = onSnapshot(notesRef, (snap) => {
-        const next = {};
-        snap.forEach(d => { next[d.id] = d.data().text; });
-        state.notes = next;
-        // Refresh editor text if the open note changed remotely
-        if (state.selectedKey) {
-          const newText = state.notes[state.selectedKey] || '';
-          if ($('noteInput').value !== newText && document.activeElement !== $('noteInput')) {
-            $('noteInput').value = newText;
-          }
-        }
-        render();
-      }, (err) => {
-        console.error(err);
-        $('syncStatus').textContent = '⚠ ' + err.code;
-      });
-    });
-  } catch (e) {
-    console.error(e);
-    $('syncStatus').textContent = '⚠ ' + (e.code || e.message);
-  }
+function subscribeNotes(uid) {
+  if (state.unsubscribe) state.unsubscribe();
+  const notesRef = collection(db, `users/${uid}/notes`);
+  state.unsubscribe = onSnapshot(notesRef, (snap) => {
+    const next = {};
+    snap.forEach(d => { next[d.id] = d.data().text; });
+    state.notes = next;
+    if (state.selectedKey) {
+      const newText = state.notes[state.selectedKey] || '';
+      if ($('noteInput').value !== newText && document.activeElement !== $('noteInput')) {
+        $('noteInput').value = newText;
+      }
+    }
+    render();
+  }, (err) => {
+    console.error(err);
+    $('syncStatus').textContent = '⚠ ' + err.code;
+  });
 }
 
 /* ---------------- Event wiring ---------------- */
@@ -543,42 +536,50 @@ $('closeBtn').addEventListener('click', closeEditor);
 $('deleteBtn').addEventListener('click', deleteNote);
 $('noteInput').addEventListener('input', debouncedSave);
 
-$('saveConfig').addEventListener('click', async () => {
-  const text = $('configInput').value;
-  $('configError').textContent = '';
+$('googleSignIn').addEventListener('click', async () => {
+  $('signinError').textContent = '';
   try {
-    const cfg = parseConfigInput(text);
-    if (!cfg.apiKey || !cfg.projectId) {
-      throw new Error('Config is missing apiKey or projectId.');
-    }
-    await saveConfig(cfg);
-    $('setupScreen').style.display = 'none';
-    $('calendarScreen').style.display = 'block';
-    render();
-    initFirebase(cfg);
+    await signInWithPopup(auth, provider);
   } catch (e) {
-    $('configError').textContent = e.message;
+    console.error(e);
+    let msg = e.code || e.message;
+    if (e.code === 'auth/popup-blocked') msg = 'Popup blocked — allow popups for this site.';
+    if (e.code === 'auth/unauthorized-domain') msg = 'This domain is not authorized in Firebase.';
+    $('signinError').textContent = msg;
   }
 });
 
-$('resetLink').addEventListener('click', async () => {
-  if (!confirm('Disconnect Firebase? Your notes stay in Firestore — this only clears the config from this artifact.')) return;
+$('avatar').addEventListener('click', (e) => {
+  e.stopPropagation();
+  $('menu').classList.toggle('open');
+});
+document.addEventListener('click', () => $('menu').classList.remove('open'));
+
+$('signOutBtn').addEventListener('click', async () => {
   if (state.unsubscribe) state.unsubscribe();
-  await clearConfig();
-  location.reload();
+  await signOut(auth);
 });
 
-/* ---------------- Boot ---------------- */
-(async () => {
-  const cfg = await loadConfig();
-  if (cfg) {
+/* ---------------- Auth state ---------------- */
+onAuthStateChanged(auth, (user) => {
+  if (user) {
+    state.uid = user.uid;
+    $('signinScreen').style.display = 'none';
     $('calendarScreen').style.display = 'block';
+    if (user.photoURL) {
+      $('avatar').style.backgroundImage = `url(${user.photoURL})`;
+    }
+    $('menuInfo').textContent = user.email || user.displayName || '';
+    $('syncStatus').textContent = '● Synced';
     render();
-    initFirebase(cfg);
+    subscribeNotes(user.uid);
   } else {
-    $('setupScreen').style.display = 'block';
+    state.uid = null;
+    state.notes = {};
+    $('calendarScreen').style.display = 'none';
+    $('signinScreen').style.display = 'block';
   }
-})();
+});
 </script>
 </body>
 </html>
