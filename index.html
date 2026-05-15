@@ -13,8 +13,8 @@
     --text: #1a1a1a;
     --muted: #9a9a9a;
     --border: #ececec;
-    --accent: #e8dcc4;
-    --accent-strong: #d4b896;
+    --accent: #ff3b30;
+    --accent-strong: #d62b22;
     --hover: #f5f5f4;
     --today: #1a1a1a;
     --danger: #c44;
@@ -27,8 +27,8 @@
       --text: #f0f0ef;
       --muted: #6b6b6a;
       --border: #2e2e2d;
-      --accent: #4a3f2a;
-      --accent-strong: #7a6544;
+      --accent: #ff453a;
+      --accent-strong: #ff6b62;
       --hover: #2a2a29;
       --today: #f0f0ef;
     }
@@ -127,8 +127,10 @@
     border-radius: 50%;
     background: var(--today);
   }
-  .day.has-note { background: var(--accent); color: var(--text); }
-  .day.has-note:hover { background: var(--accent-strong); }
+  .day.has-note { background: var(--accent); color: #fff; }
+  .day.has-note:hover { background: var(--accent-strong); color: #fff; }
+  .day.has-note.today { color: #fff; }
+  .day.has-note.today::after { background: #fff; }
   .day.selected {
     outline: 1.5px solid var(--text);
     outline-offset: -1.5px;
